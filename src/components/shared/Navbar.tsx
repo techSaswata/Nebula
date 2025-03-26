@@ -11,9 +11,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useState } from "react"
-import { toast } from "react-hot-toast"
+import { toast } from "sonner"
 
-const navigation = [
+const publicNavigation = [
+  { name: "Home", href: "/home" },
+  { name: "Courses", href: "/courses" },
+]
+
+const authenticatedNavigation = [
   { name: "Home", href: "/home" },
   { name: "Courses", href: "/courses" },
   { name: "Dashboard", href: "/dashboard" },
@@ -23,13 +28,13 @@ const navigation = [
 export default function Navbar() {
   const pathname = usePathname()
   const router = useRouter()
-  const { user, logout } = useAuth()
+  const { user, signOut } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
 
   const handleSignOut = async () => {
     try {
       setIsLoading(true)
-      await logout()
+      await signOut()
       toast.success("Successfully signed out!")
     } catch (error) {
       toast.error("Failed to sign out. Please try again.")
@@ -37,6 +42,8 @@ export default function Navbar() {
       setIsLoading(false)
     }
   }
+
+  const navigation = user ? authenticatedNavigation : publicNavigation
 
   return (
     <nav className="fixed top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
@@ -98,7 +105,7 @@ export default function Navbar() {
                   >
                     <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-pink-500/20 opacity-0 group-hover:opacity-100 transition-all duration-300" />
                     <img
-                      src={user.photoURL || "https://github.com/shadcn.png"}
+                      src="https://github.com/shadcn.png"
                       alt="Profile"
                       className="w-8 h-8 rounded-full ring-2 ring-white/80 transform transition-all duration-300 group-hover:scale-110 group-hover:ring-indigo-500"
                     />
@@ -110,7 +117,7 @@ export default function Navbar() {
                 >
                   <DropdownMenuItem className="flex flex-col items-start space-y-1 p-3 m-1 rounded-lg cursor-default bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-100">
                     <span className="font-medium bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-                      {user.displayName || user.email}
+                      {user.email}
                     </span>
                     <span className="text-xs text-gray-500">
                       {user.email}
