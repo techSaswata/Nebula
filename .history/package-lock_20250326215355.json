@@ -1,11 +1,11 @@
 {
-  "name": "academicx",
+  "name": "academix",
   "version": "0.1.0",
   "lockfileVersion": 3,
   "requires": true,
   "packages": {
     "": {
-      "name": "academicx",
+      "name": "academix",
       "version": "0.1.0",
       "dependencies": {
         "@firebase/auth": "^1.6.0",
