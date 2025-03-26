@@ -207,42 +207,46 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
 
   if (isSubmitted) {
     return (
-      <div className="min-h-screen bg-white">
-        <div className="container mx-auto px-4 py-12">
-          <Card className="max-w-2xl mx-auto p-8">
-            <h1 className="text-4xl font-bold text-indigo-900 mb-4">Test Complete</h1>
-            <p className="text-gray-700 mb-8">
-              Your responses have been submitted successfully.
-            </p>
-            <Button 
-              className="w-full bg-gradient-to-r from-indigo-600 to-pink-600 hover:from-indigo-700 hover:to-pink-700 text-white text-xl py-6 rounded-xl flex items-center justify-center gap-2 group"
-              onClick={() => window.location.href = "/dashboard"}
-            >
-              Return to Dashboard
-              <svg 
-                xmlns="http://www.w3.org/2000/svg" 
-                width="24" 
-                height="24" 
-                viewBox="0 0 24 24" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="2" 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                className="transform group-hover:translate-x-1 transition-transform"
+      <>
+        <MalpracticeDetector examId={id} />
+        <div className="min-h-screen bg-white">
+          <div className="container mx-auto px-4 py-12">
+            <Card className="max-w-2xl mx-auto p-8">
+              <h1 className="text-4xl font-bold text-indigo-900 mb-4">Test Complete</h1>
+              <p className="text-gray-700 mb-8">
+                Your responses have been submitted successfully.
+              </p>
+              <Button 
+                className="w-full bg-gradient-to-r from-indigo-600 to-pink-600 hover:from-indigo-700 hover:to-pink-700 text-white text-xl py-6 rounded-xl flex items-center justify-center gap-2 group"
+                onClick={() => window.location.href = "/dashboard"}
               >
-                <path d="M5 12h14"/>
-                <path d="m12 5 7 7-7 7"/>
-              </svg>
-            </Button>
-          </Card>
+                Return to Dashboard
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  width="24" 
+                  height="24" 
+                  viewBox="0 0 24 24" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  strokeWidth="2" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  className="transform group-hover:translate-x-1 transition-transform"
+                >
+                  <path d="M5 12h14"/>
+                  <path d="m12 5 7 7-7 7"/>
+                </svg>
+              </Button>
+            </Card>
+          </div>
         </div>
-      </div>
+      </>
     )
   }
 
   return (
     <>
+      <MalpracticeDetector examId={id} />
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50">
         {/* Header */}
         <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 text-white py-3 px-6 flex justify-between items-center shadow-lg">
