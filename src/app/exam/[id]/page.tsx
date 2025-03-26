@@ -12,7 +12,7 @@ import { use } from 'react'
 
 const mockExam = {
   id: "1",
-  title: "Aptitude Assessment",
+  title: "NSET mock",
   duration: 7200, // 2 hours in seconds
   sections: [
     {
@@ -154,31 +154,54 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
 
   if (showGuidelines) {
     return (
-      <div className="min-h-screen bg-white">
-        <div className="container mx-auto px-4 py-12">
-          <Card className="max-w-2xl mx-auto p-8">
-            <h1 className="text-2xl font-bold text-indigo-900 mb-8">
-              Test Guidelines
-            </h1>
-            <div className="space-y-4 mb-8">
-              {guidelines.map((guideline, index) => (
-                <div key={index} className="flex items-start gap-3">
-                  <div className="w-6 h-6 rounded-full bg-indigo-600 flex items-center justify-center text-white text-sm">
-                    {index + 1}
+      <>
+        <MalpracticeDetector examId={id} />
+        <div className="min-h-screen bg-white">
+          <div className="container mx-auto px-4 py-12">
+            <Card className="max-w-2xl mx-auto p-8">
+              <h1 className="text-2xl font-bold text-indigo-900 mb-8">
+                Test Guidelines
+              </h1>
+              <div className="space-y-4 mb-8">
+                {guidelines.map((guideline, index) => (
+                  <div key={index} className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-full bg-indigo-600 flex items-center justify-center text-white text-sm">
+                      {index + 1}
+                    </div>
+                    <p className="text-gray-700">{guideline}</p>
                   </div>
-                  <p className="text-gray-700">{guideline}</p>
+                ))}
+                <div className="flex items-start gap-3 bg-red-50 p-4 rounded-lg border border-red-100 mt-6">
+                  <p className="text-red-700 font-medium">
+                    ⚠️ Any attempt at malpractice (tab switching, right-click, keyboard shortcuts, etc.) will be detected and will result in test termination after 5 attempts
+                  </p>
                 </div>
-              ))}
-            </div>
-            <Button
-              onClick={() => setShowGuidelines(false)}
-              className="w-full bg-indigo-600 hover:bg-indigo-700"
-            >
-              Start Test
-            </Button>
-          </Card>
+              </div>
+              <Button
+                onClick={() => setShowGuidelines(false)}
+                className="w-full bg-gradient-to-r from-indigo-600 to-pink-600 hover:from-indigo-700 hover:to-pink-700 text-white text-xl py-6 rounded-xl flex items-center justify-center gap-2 group"
+              >
+                Start Test
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  width="24" 
+                  height="24" 
+                  viewBox="0 0 24 24" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  strokeWidth="2" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  className="transform group-hover:translate-x-1 transition-transform"
+                >
+                  <path d="M5 12h14"/>
+                  <path d="m12 5 7 7-7 7"/>
+                </svg>
+              </Button>
+            </Card>
+          </div>
         </div>
-      </div>
+      </>
     )
   }
 
@@ -187,15 +210,30 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
       <div className="min-h-screen bg-white">
         <div className="container mx-auto px-4 py-12">
           <Card className="max-w-2xl mx-auto p-8">
-            <h1 className="text-2xl font-bold text-indigo-900 mb-4">Test Complete</h1>
+            <h1 className="text-4xl font-bold text-indigo-900 mb-4">Test Complete</h1>
             <p className="text-gray-700 mb-8">
               Your responses have been submitted successfully.
             </p>
             <Button 
-              className="w-full bg-indigo-600 hover:bg-indigo-700"
+              className="w-full bg-gradient-to-r from-indigo-600 to-pink-600 hover:from-indigo-700 hover:to-pink-700 text-white text-xl py-6 rounded-xl flex items-center justify-center gap-2 group"
               onClick={() => window.location.href = "/dashboard"}
             >
               Return to Dashboard
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                width="24" 
+                height="24" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                className="transform group-hover:translate-x-1 transition-transform"
+              >
+                <path d="M5 12h14"/>
+                <path d="m12 5 7 7-7 7"/>
+              </svg>
             </Button>
           </Card>
         </div>
@@ -205,7 +243,6 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
 
   return (
     <>
-      <MalpracticeDetector examId={id} />
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50">
         {/* Header */}
         <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 text-white py-3 px-6 flex justify-between items-center shadow-lg">
