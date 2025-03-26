@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Info } from "lucide-react"
 import MalpracticeDetector from "@/components/exam/MalpracticeDetector"
 import { use } from 'react'
+import { useRouter } from "next/navigation"
 
 const mockExam = {
   id: "1",
@@ -67,6 +68,104 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
   })
   const [timeRemaining, setTimeRemaining] = useState(mockExam.duration)
   const [isSubmitted, setIsSubmitted] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const [lastActiveTime, setLastActiveTime] = useState(Date.now())
+  const [warningTime, setWarningTime] = useState<number | null>(null)
+  const router = useRouter()
+
+  const enterFullscreen = () => {
+    const element = document.documentElement
+    if (element.requestFullscreen) {
+      element.requestFullscreen()
+    } else if ((element as any).webkitRequestFullscreen) {
+      (element as any).webkitRequestFullscreen()
+    } else if ((element as any).msRequestFullscreen) {
+      (element as any).msRequestFullscreen()
+    }
+  }
+
+  const exitFullscreen = () => {
+    if (document.exitFullscreen) {
+      document.exitFullscreen()
+    } else if ((document as any).webkitExitFullscreen) {
+      (document as any).webkitExitFullscreen()
+    } else if ((document as any).msExitFullscreen) {
+      (document as any).msExitFullscreen()
+    }
+  }
+
+  const handleTermination = () => {
+    setIsSubmitted(true)
+    toast.error('Test terminated due to violation of exam rules.')
+    router.push('/dashboard')
+  }
+
+  useEffect(() => {
+    if (!showGuidelines && warningTime) {
+      const checkWarning = setInterval(() => {
+        const currentTime = Date.now()
+        if (currentTime - warningTime >= 10000) { // 10 seconds
+          handleTermination()
+        }
+      }, 1000)
+
+      return () => clearInterval(checkWarning)
+    }
+  }, [showGuidelines, warningTime])
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        setLastActiveTime(Date.now())
+        setWarningTime(Date.now())
+        toast.error('Warning: You have 10 seconds to return to the exam window or the test will be terminated.')
+      }
+    }
+
+    const handleFocusChange = () => {
+      if (!document.hasFocus()) {
+        setLastActiveTime(Date.now())
+        setWarningTime(Date.now())
+        toast.error('Warning: You have 10 seconds to return to the exam window or the test will be terminated.')
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('blur', handleFocusChange)
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('blur', handleFocusChange)
+    }
+  }, [])
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const isCurrentlyFullscreen = !!document.fullscreenElement || 
+                                   !!(document as any).webkitFullscreenElement || 
+                                   !!(document as any).mozFullScreenElement || 
+                                   !!(document as any).msFullscreenElement
+      
+      setIsFullscreen(isCurrentlyFullscreen)
+      
+      if (!isCurrentlyFullscreen && !showGuidelines) {
+        setWarningTime(Date.now())
+        toast.error('Warning: You have 10 seconds to return to fullscreen mode or the test will be terminated.')
+      }
+    }
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange)
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange)
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange)
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange)
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange)
+      document.removeEventListener('mozfullscreenchange', handleFullscreenChange)
+      document.removeEventListener('MSFullscreenChange', handleFullscreenChange)
+    }
+  }, [showGuidelines])
 
   useEffect(() => {
     if (!showGuidelines) {
@@ -152,6 +251,11 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
     setIsSubmitted(true)
   }
 
+  const handleStartTest = () => {
+    setShowGuidelines(false)
+    enterFullscreen()
+  }
+
   if (showGuidelines) {
     return (
       <>
@@ -178,7 +282,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
                 </div>
               </div>
               <Button
-                onClick={() => setShowGuidelines(false)}
+                onClick={handleStartTest}
                 className="w-full bg-gradient-to-r from-indigo-600 to-pink-600 hover:from-indigo-700 hover:to-pink-700 text-white text-xl py-6 rounded-xl flex items-center justify-center gap-2 group"
               >
                 Start Test
