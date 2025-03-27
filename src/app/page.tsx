@@ -5,14 +5,21 @@ import { cookies } from 'next/headers'
 export const dynamic = 'force-dynamic'
 
 export default async function Page() {
-  const cookieStore = cookies()
-  const supabase = createServerComponentClient({ cookies: () => cookieStore })
-  
-  const { data: { session } } = await supabase.auth.getSession()
+  try {
+    const cookieStore = await cookies()
+    const supabase = createServerComponentClient({ 
+      cookies: () => cookieStore 
+    })
+    
+    const { data: { session } } = await supabase.auth.getSession()
 
-  if (session) {
-    redirect('/dashboard')
-  } else {
-    redirect('/home')
+    if (session) {
+      return redirect('/dashboard')
+    }
+
+    return redirect('/home')
+  } catch (error) {
+    console.error('Error in root page:', error)
+    return redirect('/home')
   }
 } 
