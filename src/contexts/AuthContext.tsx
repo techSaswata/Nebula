@@ -3,14 +3,14 @@
 import { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react"
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 import { useRouter } from "next/navigation"
-import { toast } from "sonner"
 import { User } from "@supabase/supabase-js"
 
-type AuthContextType = {
+interface AuthContextType {
   user: User | null
   signIn: (email: string, password: string) => Promise<void>
   signUp: (email: string, password: string) => Promise<void>
   signOut: () => Promise<void>
+  signInWithGoogle: () => Promise<void>
   isLoading: boolean
 }
 
@@ -18,7 +18,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [loading, setLoading] = useState(true)
   const router = useRouter()
   const supabase = useMemo(() => createClientComponentClient(), [])
 
@@ -30,7 +30,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (error) {
         console.error("Error getting user:", error)
       } finally {
-        setIsLoading(false)
+        setLoading(false)
       }
     }
 
@@ -38,13 +38,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
-      setIsLoading(false)
+      router.refresh()
     })
 
     return () => {
       subscription.unsubscribe()
     }
-  }, [supabase])
+  }, [supabase, router])
 
   const signIn = useCallback(async (email: string, password: string) => {
     try {
@@ -65,6 +65,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
       })
       if (error) throw error
       router.push("/dashboard")
@@ -76,20 +79,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = useCallback(async () => {
     try {
-      setIsLoading(true)
       const { error } = await supabase.auth.signOut()
       if (error) throw error
-      
-      // Clear any local state
       setUser(null)
-      
-      // Force a hard refresh to clear any cached state
-      window.location.href = "/home"
+      router.push("/home")
+      router.refresh()
     } catch (error) {
       console.error("Error signing out:", error)
-      toast.error("Failed to sign out. Please try again.")
-    } finally {
-      setIsLoading(false)
+      throw error
+    }
+  }, [supabase, router])
+
+  const signInWithGoogle = useCallback(async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+        },
+      })
+
+      if (error) throw error
+    } catch (error) {
+      console.error('Error signing in with Google:', error)
+      throw error
     }
   }, [supabase])
 
@@ -98,14 +115,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signIn,
     signUp,
     signOut,
-    isLoading
-  }), [user, signIn, signUp, signOut, isLoading])
+    signInWithGoogle,
+    isLoading: loading
+  }), [user, signIn, signUp, signOut, signInWithGoogle, loading])
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  )
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    )
+  }
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
 export function useAuth() {
