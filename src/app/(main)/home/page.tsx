@@ -144,12 +144,25 @@ export default function Home() {
               Join our comprehensive preparation program designed to help you excel in the Scaler School of Technology entrance exam. Get expert guidance, practice resources, and personalized feedback.
             </p>
             <div className="flex gap-4 justify-center items-center">
-              <Button size="lg" className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group">
-                Start Free Trial
-                <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+              <Button 
+                size="lg" 
+                className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group"
+                asChild
+              >
+                <Link href="/register">
+                  Start Free Trial
+                  <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                </Link>
               </Button>
-              <Button variant="outline" size="lg" className="border-2 border-violet-200 text-violet-700 hover:bg-violet-50 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-                Explore Courses
+              <Button 
+                variant="outline" 
+                size="lg" 
+                className="border-2 border-violet-200 text-violet-700 hover:bg-violet-50 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                asChild
+              >
+                <Link href="/courses">
+                  Explore Courses
+                </Link>
               </Button>
             </div>
             <div className="pt-8 flex items-center justify-center gap-8 text-gray-600">
