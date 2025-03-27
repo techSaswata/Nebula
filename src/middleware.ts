@@ -2,7 +2,7 @@ import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-// Define public routes outside the middleware function to prevent recreation on each request
+// Define public routes that don't require authentication
 const PUBLIC_ROUTES = [
   '/',
   '/home',
@@ -12,7 +12,7 @@ const PUBLIC_ROUTES = [
   '/courses/[id]'
 ]
 
-// Create regex patterns for dynamic routes once
+// Create regex patterns for dynamic routes
 const DYNAMIC_ROUTE_PATTERNS = PUBLIC_ROUTES.map(route => {
   if (route.includes('[')) {
     const routePattern = route.replace(/\[.*?\]/g, '[^/]+')
@@ -22,6 +22,11 @@ const DYNAMIC_ROUTE_PATTERNS = PUBLIC_ROUTES.map(route => {
 })
 
 export async function middleware(req: NextRequest) {
+  // Handle root path redirection first
+  if (req.nextUrl.pathname === '/') {
+    return NextResponse.redirect(new URL('/home', req.url))
+  }
+
   const res = NextResponse.next()
   const supabase = createMiddlewareClient({ req, res })
 
@@ -55,7 +60,7 @@ export async function middleware(req: NextRequest) {
   return res
 }
 
-// Optimize matcher to be more specific
+// Define which routes should be processed by middleware
 export const config = {
   matcher: [
     '/',
@@ -63,6 +68,8 @@ export const config = {
     '/login',
     '/register',
     '/dashboard/:path*',
-    '/courses/:path*'
+    '/courses/:path*',
+    '/exam/:path*',
+    '/interview/:path*'
   ]
 } 
