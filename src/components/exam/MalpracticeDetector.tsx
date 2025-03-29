@@ -12,43 +12,21 @@ interface MalpracticeDetectorProps {
 
 type MalpracticeType = 'tab-switch' | 'window-focus' | 'keyboard-shortcut' | 'right-click' | 'dev-tools'
 
-interface MalpracticeCounts {
-  'tab-switch': number
-  'window-focus': number
-  'keyboard-shortcut': number
-  'right-click': number
-  'dev-tools': number
-  total: number
-}
-
 export default function MalpracticeDetector({ examId, onTerminate, onWarningCountUpdate }: MalpracticeDetectorProps) {
   const router = useRouter()
   const isTerminated = useRef(false)
   const isToasting = useRef(false)
-  const lastEventTime = useRef<Record<MalpracticeType, number>>({
-    'tab-switch': 0,
-    'window-focus': 0,
-    'keyboard-shortcut': 0,
-    'right-click': 0,
-    'dev-tools': 0
-  })
-  const [malpracticeCounts, setMalpracticeCounts] = useState<MalpracticeCounts>({
-    'tab-switch': 0,
-    'window-focus': 0,
-    'keyboard-shortcut': 0,
-    'right-click': 0,
-    'dev-tools': 0,
-    total: 0
-  })
+  const lastEventTime = useRef<number>(0)
+  const [warningCount, setWarningCount] = useState(0)
 
-  const canProcessEvent = (type: MalpracticeType) => {
+  const canProcessEvent = () => {
     if (isToasting.current) return false
     
     const now = Date.now()
-    if (now - lastEventTime.current[type] < 3000) { // 3 second cooldown
+    if (now - lastEventTime.current < 2000) { // 2 second cooldown
       return false
     }
-    lastEventTime.current[type] = now
+    lastEventTime.current = now
     return true
   }
 
@@ -67,12 +45,12 @@ export default function MalpracticeDetector({ examId, onTerminate, onWarningCoun
     if (isTerminated.current) return
 
     const handleVisibilityChange = () => {
-      if (!mounted || isTerminated.current || !document.hidden || !canProcessEvent('tab-switch')) return
+      if (!mounted || isTerminated.current || !document.hidden || !canProcessEvent()) return
       handleMalpractice('tab-switch')
     }
 
     const handleFocusChange = () => {
-      if (!mounted || isTerminated.current || document.hasFocus() || !canProcessEvent('window-focus')) return
+      if (!mounted || isTerminated.current || document.hasFocus() || !canProcessEvent()) return
       handleMalpractice('window-focus')
     }
 
@@ -94,6 +72,7 @@ export default function MalpracticeDetector({ examId, onTerminate, onWarningCoun
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!mounted || isTerminated.current) return
       
+      // Block keyboard shortcuts
       if (
         (e.ctrlKey && (e.key === 'u' || e.key === 's' || e.key === 'p')) ||
         (e.altKey && e.key === 'Tab') ||
@@ -101,12 +80,16 @@ export default function MalpracticeDetector({ examId, onTerminate, onWarningCoun
         (e.ctrlKey && e.shiftKey && e.key === 'I') ||
         (e.ctrlKey && e.shiftKey && e.key === 'J') ||
         (e.ctrlKey && e.shiftKey && e.key === 'C') ||
-        (e.ctrlKey && e.key === 'U')
+        (e.ctrlKey && e.key === 'U') ||
+        (e.ctrlKey && e.key === 'a') ||
+        (e.ctrlKey && e.key === 'c') ||
+        (e.ctrlKey && e.key === 'v') ||
+        (e.ctrlKey && e.key === 'x') ||
+        (e.ctrlKey && e.key === 'p')
       ) {
         e.preventDefault()
-        const eventType = e.key === 'F12' || (e.ctrlKey && e.shiftKey) ? 'dev-tools' : 'keyboard-shortcut'
-        if (!canProcessEvent(eventType)) return
-        handleMalpractice(eventType)
+        if (!canProcessEvent()) return
+        showToast('Warning: Restricted keyboard shortcuts are not allowed during the exam.')
       }
     }
 
@@ -123,7 +106,7 @@ export default function MalpracticeDetector({ examId, onTerminate, onWarningCoun
     if (isTerminated.current) return
 
     const handleContextMenu = (e: MouseEvent) => {
-      if (!mounted || isTerminated.current || !canProcessEvent('right-click')) return
+      if (!mounted || isTerminated.current || !canProcessEvent()) return
       e.preventDefault()
       handleMalpractice('right-click')
     }
@@ -138,41 +121,37 @@ export default function MalpracticeDetector({ examId, onTerminate, onWarningCoun
   const handleMalpractice = (type: MalpracticeType) => {
     if (isTerminated.current) return
 
-    setMalpracticeCounts(prev => {
+    setWarningCount(prev => {
       // Don't update if we've already reached the total limit
-      if (prev.total >= 10) return prev
+      if (prev >= 10) return prev
 
-      const newCounts = {
-        ...prev,
-        [type]: prev[type] + 1,
-        total: prev.total + 1
-      }
+      const newCount = prev + 1
       
       // Update the warning count in parent component if the callback exists
       if (onWarningCountUpdate) {
-        onWarningCountUpdate(newCounts.total)
+        onWarningCountUpdate(newCount)
       }
       
       // Show specific message based on malpractice type
       const message = (() => {
         switch (type) {
           case 'tab-switch':
-            return `Warning: Switching tabs detected (${newCounts.total}/10)`
+            return `Warning: Switching tabs detected (${newCount}/10)`
           case 'window-focus':
-            return `Warning: Window focus lost (${newCounts.total}/10)`
-          case 'keyboard-shortcut':
-            return `Warning: Restricted keyboard shortcut used (${newCounts.total}/10)`
+            return `Warning: Window focus lost (${newCount}/10)`
           case 'right-click':
-            return `Warning: Right-click detected (${newCounts.total}/10)`
+            return `Warning: Right-click detected (${newCount}/10)`
           case 'dev-tools':
-            return `Warning: Developer tools detected (${newCounts.total}/10)`
+            return `Warning: Developer tools detected (${newCount}/10)`
+          default:
+            return `Warning: Malpractice detected (${newCount}/10)`
         }
       })()
 
       showToast(message)
 
       // Check if total has reached 10 attempts
-      if (newCounts.total >= 10 && !isTerminated.current) {
+      if (newCount >= 10 && !isTerminated.current) {
         isTerminated.current = true
         showToast('Multiple violations detected. Your exam will be terminated.')
         
@@ -183,7 +162,7 @@ export default function MalpracticeDetector({ examId, onTerminate, onWarningCoun
         }, 3000)
       }
 
-      return newCounts
+      return newCount
     })
   }
 

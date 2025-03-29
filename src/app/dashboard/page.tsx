@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { 
@@ -14,6 +15,25 @@ import {
   GraduationCap,
   Award
 } from "lucide-react"
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+
+interface MentorshipSession {
+  id: string;
+  mentorName: string;
+  date: string;
+  time: string;
+  topic: string;
+  status: string;
+}
+
+interface Interview {
+  id: string;
+  title: string;
+  date: string;
+  time: string;
+  interviewer: string;
+  status: string;
+}
 
 const upcomingExams = [
   {
@@ -29,25 +49,6 @@ const upcomingExams = [
     date: "2024-04-20",
     duration: "1.5 hours",
     status: "Scheduled",
-  },
-]
-
-const upcomingInterviews = [
-  {
-    id: 1,
-    title: "Mock NSET Interview",
-    date: "2024-04-18",
-    time: "10:00 AM",
-    interviewer: "Dr. Sharma",
-    status: "Scheduled",
-  },
-  {
-    id: 2,
-    title: "Technical Assessment",
-    date: "2024-04-22",
-    time: "2:00 PM",
-    interviewer: "Prof. Gupta",
-    status: "Pending",
   },
 ]
 
@@ -109,6 +110,103 @@ const getSectionStyle = (index: number) => {
 }
 
 export default function DashboardPage() {
+  const [upcomingMentorships, setUpcomingMentorships] = useState<MentorshipSession[]>([
+    {
+      id: "test-session-1",
+      mentorName: "Dr. Smith",
+      date: "2024-04-25",
+      time: "10:00 AM",
+      topic: "NSET Preparation - Problem Solving Strategies",
+      status: "scheduled"
+    }
+  ])
+  
+  const [upcomingInterviews, setUpcomingInterviews] = useState<Interview[]>([
+    {
+      id: "test-interview-1",
+      title: "Mock NSET Interview",
+      date: "2024-04-18",
+      time: "10:00 AM",
+      interviewer: "Dr. Sharma",
+      status: "Scheduled"
+    },
+    {
+      id: "test-interview-2",
+      title: "Technical Assessment",
+      date: "2024-04-22",
+      time: "2:00 PM",
+      interviewer: "Prof. Gupta",
+      status: "Pending"
+    }
+  ])
+  
+  const [isLoading, setIsLoading] = useState(true)
+  const supabase = createClientComponentClient()
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const { data: { user }, error: userError } = await supabase.auth.getUser()
+        if (userError) throw userError
+
+        if (!user) return
+
+        // Comment out Supabase fetching for now - using dummy data instead
+        /*
+        // Fetch mentorship sessions
+        const { data: mentorshipData, error: mentorshipError } = await supabase
+          .from('mentorship_sessions')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('status', 'scheduled')
+          .order('date', { ascending: true })
+          .order('time', { ascending: true })
+
+        if (mentorshipError) throw mentorshipError
+
+        // Transform mentorship data
+        const sessions: MentorshipSession[] = mentorshipData.map(session => ({
+          id: session.id,
+          mentorName: session.mentor_name,
+          date: session.date,
+          time: session.time,
+          topic: session.topic,
+          status: session.status
+        }))
+
+        // Fetch interviews
+        const { data: interviewData, error: interviewError } = await supabase
+          .from('interviews')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('date', { ascending: true })
+          .order('time', { ascending: true })
+
+        if (interviewError) throw interviewError
+
+        // Transform interview data
+        const interviews: Interview[] = interviewData.map(interview => ({
+          id: interview.id,
+          title: interview.title,
+          date: interview.date,
+          time: interview.time,
+          interviewer: interview.interviewer,
+          status: interview.status
+        }))
+
+        setUpcomingMentorships(sessions)
+        setUpcomingInterviews(interviews)
+        */
+      } catch (error) {
+        console.error('Error fetching data:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [supabase])
+
   return (
     <div className="container mx-auto px-4 py-8 bg-white min-h-screen">
       <div className="max-w-7xl mx-auto space-y-8">
@@ -254,53 +352,114 @@ export default function DashboardPage() {
               </div>
             </section>
 
-            {/* Quick Actions */}
+            {/* Mentorship Section (moved from bottom) */}
             <section className={`rounded-2xl p-6 border animate-slide-up [animation-delay:800ms] ${getSectionStyle(3).bg} ${getSectionStyle(3).border} shadow-lg hover:shadow-xl transition-all duration-300`}>
-              <div className="flex items-center gap-2 mb-6">
-                <BarChart className={`h-6 w-6 ${getSectionStyle(3).icon}`} />
-                <h2 className={`text-2xl font-bold ${getSectionStyle(3).text}`}>Quick Actions</h2>
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-2">
+                  <Users className={`h-6 w-6 ${getSectionStyle(3).icon}`} />
+                  <h2 className={`text-2xl font-bold ${getSectionStyle(3).text}`}>Upcoming Mentorship</h2>
+                </div>
+                {upcomingMentorships.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 group"
+                    asChild
+                  >
+                    <Link href="/schedule-mentorship">
+                      Schedule Another
+                      <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                    </Link>
+                  </Button>
+                )}
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <Link href="/courses" className="group">
-                  <Button 
-                    className="w-full bg-white hover:bg-emerald-50 border-emerald-200 text-emerald-700 hover:text-emerald-800 group-hover:scale-[1.02] transition-all duration-300" 
-                    variant="outline"
+
+              {upcomingMentorships.length > 0 ? (
+                <div className="space-y-4">
+                  {upcomingMentorships.map((session) => (
+                    <div
+                      key={session.id}
+                      className="bg-white/80 backdrop-blur-sm border border-emerald-100 rounded-xl p-4 hover:scale-[1.02] transition-all duration-300 hover:shadow-lg hover:shadow-emerald-200/50"
+                    >
+                      <h3 className="font-semibold mb-3 text-gray-900">{session.mentorName}</h3>
+                      <div className="space-y-2 mb-3">
+                        <div className="flex items-center gap-1.5 text-gray-600">
+                          <Calendar className="h-4 w-4" />
+                          <span className="text-sm">{session.date} at {session.time}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-gray-600">
+                          <BookOpen className="h-4 w-4" />
+                          <span className="text-sm">{session.topic}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 bg-white/80 backdrop-blur-sm border border-emerald-100 rounded-xl">
+                  <Users className="w-12 h-12 mx-auto text-emerald-300 mb-3" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Upcoming Sessions</h3>
+                  <p className="text-gray-600 mb-4">Schedule your first mentorship session to get started</p>
+                  <Button
+                    className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:from-emerald-600 hover:to-teal-600 group"
+                    asChild
                   >
-                    Browse Courses
-                    <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                    <Link href="/schedule-mentorship">
+                      Schedule Now
+                      <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                    </Link>
                   </Button>
-                </Link>
-                <Link href="/practice" className="group">
-                  <Button 
-                    className="w-full bg-white hover:bg-emerald-50 border-emerald-200 text-emerald-700 hover:text-emerald-800 group-hover:scale-[1.02] transition-all duration-300" 
-                    variant="outline"
-                  >
-                    Practice Tests
-                    <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                  </Button>
-                </Link>
-                <Link href="/schedule-interview" className="group">
-                  <Button 
-                    className="w-full bg-white hover:bg-emerald-50 border-emerald-200 text-emerald-700 hover:text-emerald-800 group-hover:scale-[1.02] transition-all duration-300" 
-                    variant="outline"
-                  >
-                    Schedule Interview
-                    <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                  </Button>
-                </Link>
-                <Link href="/progress" className="group">
-                  <Button 
-                    className="w-full bg-white hover:bg-emerald-50 border-emerald-200 text-emerald-700 hover:text-emerald-800 group-hover:scale-[1.02] transition-all duration-300" 
-                    variant="outline"
-                  >
-                    View Progress
-                    <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                  </Button>
-                </Link>
-              </div>
+                </div>
+              )}
             </section>
           </div>
         </div>
+
+        {/* Quick Actions (moved from right column) */}
+        <section className={`rounded-2xl p-6 border animate-slide-up [animation-delay:800ms] ${getSectionStyle(2).bg} ${getSectionStyle(2).border} shadow-lg hover:shadow-xl transition-all duration-300`}>
+          <div className="flex items-center gap-2 mb-6">
+            <BarChart className={`h-6 w-6 ${getSectionStyle(2).icon}`} />
+            <h2 className={`text-2xl font-bold ${getSectionStyle(2).text}`}>Quick Actions</h2>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Link href="/courses" className="group">
+              <Button 
+                className="w-full bg-white hover:bg-amber-50 border-amber-200 text-amber-700 hover:text-amber-800 group-hover:scale-[1.02] transition-all duration-300" 
+                variant="outline"
+              >
+                Browse Courses
+                <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+              </Button>
+            </Link>
+            <Link href="/practice" className="group">
+              <Button 
+                className="w-full bg-white hover:bg-amber-50 border-amber-200 text-amber-700 hover:text-amber-800 group-hover:scale-[1.02] transition-all duration-300" 
+                variant="outline"
+              >
+                Practice Tests
+                <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+              </Button>
+            </Link>
+            <Link href="/schedule-interview" className="group">
+              <Button 
+                className="w-full bg-white hover:bg-amber-50 border-amber-200 text-amber-700 hover:text-amber-800 group-hover:scale-[1.02] transition-all duration-300" 
+                variant="outline"
+              >
+                Schedule Interview
+                <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+              </Button>
+            </Link>
+            <Link href="/progress" className="group">
+              <Button 
+                className="w-full bg-white hover:bg-amber-50 border-amber-200 text-amber-700 hover:text-amber-800 group-hover:scale-[1.02] transition-all duration-300" 
+                variant="outline"
+              >
+                View Progress
+                <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+              </Button>
+            </Link>
+          </div>
+        </section>
       </div>
     </div>
   )

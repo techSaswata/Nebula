@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { toast } from "sonner"
 import { 
   Sparkles, 
@@ -21,7 +21,9 @@ import {
   MessageCircle,
   Gift,
   X,
-  Tag
+  Tag,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react"
 
 // Force dynamic rendering
@@ -32,6 +34,7 @@ export default function Home() {
   const [copied, setCopied] = useState(false)
   const [showPromo, setShowPromo] = useState(true)
   const [isVisible, setIsVisible] = useState(true)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -62,6 +65,20 @@ export default function Home() {
       window.open("https://www.scaler.com/school-of-technology/", "_blank")
     } catch (err) {
       toast.error("Failed to copy code")
+    }
+  }
+
+  const scroll = (direction: 'left' | 'right') => {
+    if (scrollContainerRef.current) {
+      const scrollAmount = 300; // Adjust scroll amount as needed
+      const newScrollLeft = direction === 'left' 
+        ? scrollContainerRef.current.scrollLeft - scrollAmount
+        : scrollContainerRef.current.scrollLeft + scrollAmount;
+      
+      scrollContainerRef.current.scrollTo({
+        left: newScrollLeft,
+        behavior: 'smooth'
+      });
     }
   }
 
@@ -267,12 +284,13 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-[85rem] mx-auto">
+          <div className="flex overflow-x-auto gap-8 pb-4" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
             {[
               {
                 name: "Saswata Das",
                 role: "Co-Founder",
                 image: "/mentors/saswata.jpg",
+                linkedin: "https://www.linkedin.com/in/saswata-das-49611b318/",
                 achievements: [
                   "AIR 4039 in JEE Adv. 2024",
                   "Mentored 50+ NSET aspirants",
@@ -280,39 +298,59 @@ export default function Home() {
                   "Member of Innovation Lab"
                 ]
               },
-              {
-                name: "Harshit Tiwari",
-                role: "Co-Founder",
-                image: "/mentors/harshit.jpg",
-                achievements: [
-                  "25% Scholarship at SST",
-                  "AIR 100 in NDA",
-                  "Specialist @CodeForces"
-                ]
-              },
-              {
-                name: "Rohan Jangam",
-                role: "Co-Founder",
-                image: "/mentors/rohan.jpg",
-                achievements: [
-                  "Member @NlogN-Club-SST",
-                  "Member @OSS Club-SST"
-                ]
-              },
+
               {
                 name: "Ankit Kumar",
                 role: "Co-Founder",
                 image: "/mentors/ankit.jpg",
+                linkedin: "",
                 achievements: [
                   "Member @NlogN-Club-SST",
                   "SIH 2024 Grand Finalist",
                   "Member @OSS Club-SST"
                 ]
+              },
+
+              {
+                name: "Pratham Jain",
+                role: "Assessment Lead",
+                image: "/mentors/pratham.jpg",
+                linkedin: "https://www.linkedin.com/in/prathampy/",
+                achievements: [
+                  "99.996% in Maths (JEE Mains)",
+                  "IOQM Stage-1 Qualified",
+                  "Expert @CodeForces",
+                  "Intern @Undivided Capital"
+                ]
+              },
+
+              {
+                name: "Harshit Tiwari",
+                role: "Tech Lead",
+                image: "/mentors/harshit.jpg",
+                linkedin: "https://www.linkedin.com/in/cypherion/",
+                achievements: [
+                  "Offered 25% Scholarship at SST",
+                  "",
+                  "Specialist @CodeForces"
+                ]
+              },
+
+              {
+                name: "Rohan Jangam",
+                role: "Pentester",
+                image: "/mentors/rohan.jpg",
+                linkedin: "https://www.linkedin.com/in/rohan-jangam-593648211/",
+                achievements: [
+                  "Member @NlogN-Club-SST",
+                  "Member @OSS Club-SST"
+                ]
               }
+              
             ].map((mentor, index) => (
               <div 
                 key={index}
-                className="group bg-white rounded-2xl shadow-lg overflow-hidden hover:scale-[1.02] transition-all duration-300 hover:shadow-xl animate-fade-in flex flex-col w-full"
+                className="group bg-white rounded-2xl shadow-lg overflow-hidden hover:scale-[1.02] transition-all duration-300 hover:shadow-xl animate-fade-in flex flex-col min-w-[290px]"
                 style={{ animationDelay: `${index * 150}ms` }}
               >
                 <div className="h-32 bg-gradient-to-r from-indigo-600 to-violet-600 relative overflow-hidden">
@@ -344,6 +382,7 @@ export default function Home() {
                   <Button 
                     variant="outline" 
                     className="w-full mt-6 border-violet-200 text-violet-600 hover:bg-violet-50 group"
+                    onClick={() => window.open(mentor.linkedin, '_blank')}
                   >
                     Connect on LinkedIn
                     <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
@@ -356,8 +395,7 @@ export default function Home() {
       </section>
 
       {/* CTA Section */}
-      <section className="relative py-24 px-4 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 to-violet-600 -z-10" />
+      <section className="relative py-24 px-4 overflow-hidden bg-gradient-to-r from-indigo-600 to-violet-600">
         <div className="container mx-auto text-center text-white">
           <div className="max-w-3xl mx-auto space-y-8">
             <h2 className="text-4xl font-bold">
@@ -367,21 +405,24 @@ export default function Home() {
               Join hundreds of successful students who have achieved their dream of studying at Scaler School of Technology.
             </p>
             <div className="flex gap-4 justify-center">
-            <Link href="/register">
               <Button 
                 size="lg" 
-                className="bg-white text-indigo-600 hover:bg-white/90 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group"
+                className="bg-white text-indigo-600 hover:bg-white/90 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group flex items-center gap-2"
+                asChild
               >
-                Get Started
-                <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                <Link href="/register">
+                  Get Started
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </Link>
               </Button>
-            </Link>
               <Button 
-                variant="outline" 
                 size="lg" 
-                className="border-2 border-white text-white hover:bg-white/10 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                className="bg-transparent border-2 border-white text-white hover:bg-white/10 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group flex items-center gap-2"
+                asChild
               >
-                Learn More
+                <Link href="/courses">
+                  Learn More
+                </Link>
               </Button>
             </div>
             <div className="pt-8 flex items-center justify-center gap-8 text-white/90">

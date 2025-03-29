@@ -23,6 +23,7 @@ const authenticatedNavigation = [
   { name: "Courses", href: "/courses" },
   { name: "Dashboard", href: "/dashboard" },
   { name: "Schedule Interview", href: "/schedule-interview" },
+  { name: "Schedule Mentorship", href: "/schedule-mentorship" },
 ]
 
 export default function Navbar() {
@@ -52,7 +53,7 @@ export default function Navbar() {
           href="/home" 
           className="mr-8 flex items-center space-x-2 group"
         >
-          <span className="text-2xl font-bold text-primary transition-all group-hover:text-primary/80">
+          <span className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent transition-all group-hover:from-indigo-500 group-hover:to-violet-500">
             AcademiX
           </span>
         </Link>

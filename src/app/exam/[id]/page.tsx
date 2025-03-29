@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
 import { Card } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Info } from "lucide-react"
 import { use } from "react"
 import { useRouter } from "next/navigation"
@@ -28,17 +28,14 @@ interface ExamSection {
 }
 
 const guidelines = [
-  "The test consists of Mathematics and Logical Reasoning sections",
-  "The Mathematics section contains 10 questions (1-10)",
-  "The Logical Reasoning section contains 10 questions (11-20)",
+  "The test consists of 2 sections: Mathematics and Logical Reasoning",
+  "Each section contains 10 questions",
   "All answers must be integers",
   "You can mark questions for review and return to them later",
   "The timer will start as soon as you begin the test",
   "Submit your answers before the timer runs out",
-  "Your progress is automatically saved",
-  "Do not switch tabs, use keyboard shortcuts, or right-click during the exam",
-  "More than 10 violations will result in automatic termination of your test",
-  "The test must be taken in fullscreen mode - exiting fullscreen for more than 10 seconds will terminate the test"
+  "You can navigate between sections using the top navigation bar",
+  "Your progress is automatically saved"
 ]
 
 // Add type definition for MathJax
@@ -165,9 +162,10 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
   const { id } = use(params)
   const [showGuidelines, setShowGuidelines] = useState(true)
   const [showInstructionsDialog, setShowInstructionsDialog] = useState(false)
+  const [showFullscreenWarning, setShowFullscreenWarning] = useState(false)
   const [currentSection, setCurrentSection] = useState(0)
   const [currentQuestion, setCurrentQuestion] = useState(0)
-  const [answers, setAnswers] = useState<{ [key: string]: { [key: number]: number | null } }>({
+  const [answers, setAnswers] = useState<{ [key: string]: { [key: number]: string | number | null } }>({
     math: {}
   })
   const [markedForReview, setMarkedForReview] = useState<{ [key: string]: number[] }>({
@@ -182,6 +180,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
   const [lastActiveTime, setLastActiveTime] = useState(Date.now())
   const [warningTime, setWarningTime] = useState<number | null>(null)
   const [warningCount, setWarningCount] = useState(0)
+  const warningCountRef = useRef(0)
   const router = useRouter()
   const [examData, setExamData] = useState<{
     id: string
@@ -191,6 +190,10 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
   } | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [fullscreenCountdown, setFullscreenCountdown] = useState(10)
+  const countdownRef = useRef<NodeJS.Timeout | null>(null)
+  const focusLostStartTime = useRef<number | null>(null);
+  const toastIdRef = useRef<string | number | null>(null);
 
   // Fetch questions from API
   useEffect(() => {
@@ -293,52 +296,95 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
     }
   }
 
-  // Memoize the termination function to avoid dependency issues
   const handleTermination = useCallback(() => {
-    setWarningCount(10)
-    toast.error("Exam terminated due to security violation")
-    setIsSubmitted(true)
+    setIsSubmitted(true);
+    toast.error('Test terminated due to violation of exam rules.');
     
-    // Attempt to exit fullscreen if we're terminating
+    // Exit fullscreen before redirecting
     if (document.fullscreenElement) {
-      exitFullscreen();
+      document.exitFullscreen().catch(err => console.error('Error exiting fullscreen:', err));
+    } else if ((document as any).webkitFullscreenElement) {
+      (document as any).webkitExitFullscreen();
+    } else if ((document as any).mozFullScreenElement) {
+      (document as any).mozCancelFullScreen();
+    } else if ((document as any).msFullscreenElement) {
+      (document as any).msExitFullscreen();
     }
-    
-    // Redirect to dashboard after a delay
-    setTimeout(() => {
-      window.location.href = "/dashboard"
-    }, 2000)
-  }, [exitFullscreen])
 
-  const handleWarningCountUpdate = (count: number) => {
-    setWarningCount(count)
-  }
+    // Delay navigation to ensure fullscreen exit completes
+    setTimeout(() => {
+      router.push('/dashboard');
+    }, 500);
+  }, [router]);
+
+  const handleWarningCountUpdate = useCallback((count: number) => {
+    warningCountRef.current = count
+  }, [])
+
+  useEffect(() => {
+    setWarningCount(warningCountRef.current)
+  }, [warningCountRef.current])
 
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.hidden) {
-        setLastActiveTime(Date.now())
-        setWarningTime(Date.now())
-        // toast.error('Warning: Return to exam window within 10 seconds.')
+        setLastActiveTime(Date.now());
+        setWarningTime(Date.now());
+        focusLostStartTime.current = Date.now();
+        // Dismiss previous toast and show new one immediately
+        toast.dismiss();
+        toast.error('Warning: Return to exam window within 10 seconds.', {
+          duration: 0 // Set duration to 0 to prevent auto-dismiss
+        });
+      } else if (focusLostStartTime.current) {
+        const lostTime = Math.floor((Date.now() - focusLostStartTime.current) / 1000);
+        if (lostTime >= 10) {
+          handleTermination();
+        } else {
+          // Dismiss previous toast and show new one immediately
+          toast.dismiss();
+          toast.error(`Time away from exam: ${lostTime} seconds. Maximum allowed: 10 seconds`, {
+            duration: 0 // Set duration to 0 to prevent auto-dismiss
+          });
+        }
+        focusLostStartTime.current = null;
       }
-    }
+    };
 
     const handleFocusChange = () => {
       if (!document.hasFocus()) {
-        setLastActiveTime(Date.now())
-        setWarningTime(Date.now())
-        // toast.error('Warning: Return to exam window within 10 seconds.')
+        setLastActiveTime(Date.now());
+        setWarningTime(Date.now());
+        focusLostStartTime.current = Date.now();
+        // Dismiss previous toast and show new one immediately
+        toast.dismiss();
+        toast.error('Warning: Return to exam window within 10 seconds.', {
+          duration: 0 // Set duration to 0 to prevent auto-dismiss
+        });
+      } else if (focusLostStartTime.current) {
+        const lostTime = Math.floor((Date.now() - focusLostStartTime.current) / 1000);
+        if (lostTime >= 10) {
+          handleTermination();
+        } else {
+          // Dismiss previous toast and show new one immediately
+          toast.dismiss();
+          toast.error(`Time away from exam: ${lostTime} seconds. Maximum allowed: 10 seconds`, {
+            duration: 0 // Set duration to 0 to prevent auto-dismiss
+          });
+        }
+        focusLostStartTime.current = null;
       }
-    }
+    };
 
-    document.addEventListener("visibilitychange", handleVisibilityChange)
-    window.addEventListener("blur", handleFocusChange)
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("blur", handleFocusChange);
 
     return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange)
-      window.removeEventListener("blur", handleFocusChange)
-    }
-  }, [])
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("blur", handleFocusChange);
+      toast.dismiss(); // Clean up any remaining toasts
+    };
+  }, []);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -350,17 +396,9 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
       setIsFullscreen(isCurrentlyFullscreen)
 
       if (!isCurrentlyFullscreen && !showGuidelines && !isSubmitted) {
-        // Start the warning countdown
-        setWarningTime(Date.now())
-        toast.error('WARNING: Return to fullscreen mode within 10 seconds or the test will be terminated.')
-        
-        // Try to automatically re-enter fullscreen after a brief delay
-        // This may not work in all browsers due to security restrictions
-        setTimeout(() => {
-          if (!document.fullscreenElement) {
-            enterFullscreen();
-          }
-        }, 1000);
+        setShowFullscreenWarning(true)
+        // Reset countdown when fullscreen is exited
+        setFullscreenCountdown(10)
       }
     }
 
@@ -375,23 +413,42 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
       document.removeEventListener("mozfullscreenchange", handleFullscreenChange)
       document.removeEventListener("MSFullscreenChange", handleFullscreenChange)
     }
-  }, [showGuidelines, isSubmitted, enterFullscreen])
+  }, [showGuidelines, isSubmitted])
+
+  useEffect(() => {
+    let countdownInterval: NodeJS.Timeout | null = null;
+    
+    if (showFullscreenWarning) {
+      countdownInterval = setInterval(() => {
+        setFullscreenCountdown((prev) => {
+          if (prev <= 1) {
+            if (countdownInterval) {
+              clearInterval(countdownInterval);
+            }
+            handleTermination();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => {
+        if (countdownInterval) {
+          clearInterval(countdownInterval);
+        }
+      };
+    }
+  }, [showFullscreenWarning, handleTermination]);
 
   useEffect(() => {
     if (!showGuidelines && warningTime) {
       const checkWarning = setInterval(() => {
         const currentTime = Date.now()
-        // If not in fullscreen mode for more than 10 seconds, terminate the test
         if (currentTime - warningTime >= 10000 && !isFullscreen) {
-          // Clear the interval
-          clearInterval(checkWarning);
-          
-          // Show termination message and terminate test
-          toast.error('Test terminated: You exited fullscreen mode for too long.');
-          setTimeout(() => handleTermination(), 1000);
-          
-          // Reset the warning time
-          setWarningTime(null);
+          clearInterval(checkWarning)
+          toast.error('Test terminated: You exited fullscreen mode for too long.')
+          setTimeout(() => handleTermination(), 1000)
+          setWarningTime(null)
         }
       }, 1000)
 
@@ -423,7 +480,6 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
   }
 
   const handleAnswerInput = (value: string) => {
-    const numValue = value === "" ? null : parseInt(value)
     const sectionId = examData?.sections[currentSection]?.id
     if (!sectionId) return
 
@@ -434,7 +490,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
       ...prev,
       [sectionId]: {
         ...prev[sectionId],
-        [answerIndex]: numValue
+        [answerIndex]: value === "" ? null : value
       }
     }))
   }
@@ -517,6 +573,115 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
     enterFullscreen()
   }
 
+  // Add effect to disable right-click and text selection
+  useEffect(() => {
+    const disableRightClick = (e: MouseEvent) => {
+      e.preventDefault();
+      return false;
+    };
+
+    const disableSelection = (e: Event) => {
+      // Allow selection within input fields
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT') {
+        return true;
+      }
+      e.preventDefault();
+      return false;
+    };
+
+    // Disable right click
+    document.addEventListener('contextmenu', disableRightClick);
+    
+    // Disable text selection except for input fields
+    document.addEventListener('selectstart', disableSelection);
+    document.addEventListener('mousedown', disableSelection);
+    
+    // Add CSS to disable text selection except for input fields
+    document.body.style.userSelect = 'none';
+    (document.body.style as any).webkitUserSelect = 'none';
+    (document.body.style as any).MozUserSelect = 'none';
+    (document.body.style as any).msUserSelect = 'none';
+
+    // Enable selection for input fields
+    const inputs = document.querySelectorAll('input');
+    inputs.forEach(input => {
+      input.style.userSelect = 'text';
+      (input.style as any).webkitUserSelect = 'text';
+      (input.style as any).MozUserSelect = 'text';
+      (input.style as any).msUserSelect = 'text';
+    });
+
+    return () => {
+      document.removeEventListener('contextmenu', disableRightClick);
+      document.removeEventListener('selectstart', disableSelection);
+      document.removeEventListener('mousedown', disableSelection);
+      document.body.style.userSelect = '';
+      (document.body.style as any).webkitUserSelect = '';
+      (document.body.style as any).MozUserSelect = '';
+      (document.body.style as any).msUserSelect = '';
+    };
+  }, []);
+
+  // Add enhanced screenshot prevention
+  useEffect(() => {
+    const preventScreenshot = (e: KeyboardEvent) => {
+      // Block Cmd+Space (Spotlight) more aggressively
+      if (e.metaKey && (e.code === 'Space' || e.key === ' ' || e.keyCode === 32)) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        toast.error('System shortcuts are not allowed during the exam');
+        return false;
+      }
+
+      // Detect Mac shortcuts
+      if (e.metaKey || e.key === 'Meta') {
+        e.preventDefault();
+        e.stopPropagation();
+
+        // Block all combinations with Meta key
+        if (
+          e.key === 'c' || e.key === 'C' || // Copy
+          e.key === 'v' || e.key === 'V' || // Paste
+          e.key === 'x' || e.key === 'X' || // Cut
+          e.key === 'a' || e.key === 'A' || // Select all
+          e.key === 'p' || e.key === 'P' || // Print
+          e.key === 's' || e.key === 'S' || // Save
+          ['3', '4', '5', '6'].includes(e.key) || // Screenshots
+          e.key === 'Tab' // Tab switching
+        ) {
+          toast.error('System shortcuts are not allowed during the exam');
+          return false;
+        }
+      }
+
+      // Block common screenshot combinations
+      if (
+        (e.ctrlKey && e.shiftKey) || // Ctrl+Shift combinations
+        (e.altKey && e.shiftKey) ||  // Alt+Shift combinations
+        e.key === 'PrintScreen' ||    // PrintScreen key
+        e.key === 'F12' ||           // Developer tools
+        (e.ctrlKey && (e.key === 'p' || e.key === 'P')) || // Print
+        (e.altKey && e.key === 'PrintScreen') // Alt+PrintScreen
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        toast.error('Screenshots are not allowed during the exam');
+        return false;
+      }
+    };
+
+    // Add event listeners with capture phase
+    document.addEventListener('keydown', preventScreenshot, true);
+    window.addEventListener('keydown', preventScreenshot, true);
+
+    return () => {
+      document.removeEventListener('keydown', preventScreenshot, true);
+      window.removeEventListener('keydown', preventScreenshot, true);
+    };
+  }, []);
+
   // Loading state
   if (isLoading) {
     return (
@@ -551,6 +716,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
   if (showGuidelines) {
     return (
       <>
+        <MalpracticeDetector examId={id} onTerminate={handleTermination} />
         <div className="min-h-screen bg-white">
           <div className="container mx-auto px-4 py-12">
             <Card className="max-w-2xl mx-auto p-8">
@@ -563,19 +729,12 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
                     <div className="w-6 h-6 rounded-full bg-indigo-600 flex items-center justify-center text-white text-sm">
                       {index + 1}
                     </div>
-                    <p className={`text-gray-700 ${index >= 8 ? 'font-medium text-red-600' : ''}`}>
-                      {guideline}
-                    </p>
+                    <p className="text-gray-700">{guideline}</p>
                   </div>
                 ))}
                 <div className="flex items-start gap-3 bg-red-50 p-4 rounded-lg border border-red-100 mt-6">
                   <p className="text-red-700 font-medium">
-                    ⚠️ Any attempt at malpractice (tab switching, right-click, keyboard shortcuts, etc.) will be detected and counted. After 10 violations, your test will be automatically terminated.
-                  </p>
-                </div>
-                <div className="flex items-start gap-3 bg-red-50 p-4 rounded-lg border border-red-100 mt-4">
-                  <p className="text-red-700 font-medium">
-                    ⚠️ IMPORTANT: This test must be taken in fullscreen mode. If you exit fullscreen for more than 10 seconds, your test will be immediately terminated without warning.
+                    ⚠️ Any attempt at malpractice (tab switching, right-click, keyboard shortcuts, etc.) will be detected and will result in test termination after 5 attempts
                   </p>
                 </div>
               </div>
@@ -610,6 +769,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
   if (isSubmitted) {
     return (
       <>
+        <MalpracticeDetector examId={id} onTerminate={handleTermination} />
         <div className="min-h-screen bg-white">
           <div className="container mx-auto px-4 py-12">
             <Card className="max-w-2xl mx-auto p-8">
@@ -665,7 +825,11 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
       />
 
       {!showGuidelines && !isSubmitted && (
-        <MalpracticeDetector examId={id} onTerminate={handleTermination} onWarningCountUpdate={handleWarningCountUpdate} />
+        <MalpracticeDetector 
+          examId={id} 
+          onTerminate={handleTermination} 
+          onWarningCountUpdate={handleWarningCountUpdate} 
+        />
       )}
 
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50">
@@ -742,8 +906,8 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
                     )}
                   />
                   <Input
-                    type="number"
-                    placeholder="Enter your answer (integer only)"
+                    type="text"
+                    placeholder="Enter your answer"
                     value={answers[examData?.sections[currentSection]?.id || '']?.[currentSection === 1 ? currentQuestion + 10 : currentQuestion] ?? ""}
                     onChange={(e) => handleAnswerInput(e.target.value)}
                     className="mb-6 border-2 border-indigo-100 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all duration-300"
@@ -885,6 +1049,35 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
             >
               Continue Test
             </Button>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog 
+          open={showFullscreenWarning}
+          onOpenChange={() => {}} // This prevents the dialog from closing on outside click
+          modal={true}
+        >
+          <DialogContent className="bg-white" onPointerDownOutside={(e) => e.preventDefault()}>
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold text-red-600">Fullscreen Required</DialogTitle>
+              <DialogDescription className="text-gray-600">
+                The exam must be taken in fullscreen mode. Please return to fullscreen within {fullscreenCountdown} seconds to continue.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex flex-col items-center gap-4 mt-6">
+              <div className="text-6xl font-bold text-red-600">
+                {fullscreenCountdown}
+              </div>
+              <Button
+                onClick={() => {
+                  enterFullscreen();
+                  setShowFullscreenWarning(false);
+                }}
+                className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-300"
+              >
+                Return to Fullscreen
+              </Button>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
