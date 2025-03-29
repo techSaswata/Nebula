@@ -13,7 +13,7 @@ export interface Question {
 
 export async function GET(request: Request) {
   try {
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
     
     // Get query parameters
