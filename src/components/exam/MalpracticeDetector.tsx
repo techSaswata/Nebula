@@ -6,6 +6,8 @@ import { toast } from 'sonner'
 
 interface MalpracticeDetectorProps {
   examId: string
+  onTerminate: () => void
+  onWarningCountUpdate?: (count: number) => void
 }
 
 type MalpracticeType = 'tab-switch' | 'window-focus' | 'keyboard-shortcut' | 'right-click' | 'dev-tools'
@@ -19,7 +21,7 @@ interface MalpracticeCounts {
   total: number
 }
 
-export default function MalpracticeDetector({ examId }: MalpracticeDetectorProps) {
+export default function MalpracticeDetector({ examId, onTerminate, onWarningCountUpdate }: MalpracticeDetectorProps) {
   const router = useRouter()
   const isTerminated = useRef(false)
   const isToasting = useRef(false)
@@ -138,7 +140,7 @@ export default function MalpracticeDetector({ examId }: MalpracticeDetectorProps
 
     setMalpracticeCounts(prev => {
       // Don't update if we've already reached the total limit
-      if (prev.total >= 5) return prev
+      if (prev.total >= 10) return prev
 
       const newCounts = {
         ...prev,
@@ -146,29 +148,39 @@ export default function MalpracticeDetector({ examId }: MalpracticeDetectorProps
         total: prev.total + 1
       }
       
+      // Update the warning count in parent component if the callback exists
+      if (onWarningCountUpdate) {
+        onWarningCountUpdate(newCounts.total)
+      }
+      
       // Show specific message based on malpractice type
       const message = (() => {
         switch (type) {
           case 'tab-switch':
-            return `Attempted malpractice: Switching tabs detected (${newCounts.total}/5)`
+            return `Warning: Switching tabs detected (${newCounts.total}/10)`
           case 'window-focus':
-            return `Attempted malpractice: Window focus lost (${newCounts.total}/5)`
+            return `Warning: Window focus lost (${newCounts.total}/10)`
           case 'keyboard-shortcut':
-            return `Attempted malpractice: Restricted keyboard shortcut used (${newCounts.total}/5)`
+            return `Warning: Restricted keyboard shortcut used (${newCounts.total}/10)`
           case 'right-click':
-            return `Attempted malpractice: Right-click detected (${newCounts.total}/5)`
+            return `Warning: Right-click detected (${newCounts.total}/10)`
           case 'dev-tools':
-            return `Attempted malpractice: Developer tools detected (${newCounts.total}/5)`
+            return `Warning: Developer tools detected (${newCounts.total}/10)`
         }
       })()
 
       showToast(message)
 
-      // Check if total has reached 5 attempts
-      if (newCounts.total >= 5 && !isTerminated.current) {
+      // Check if total has reached 10 attempts
+      if (newCounts.total >= 10 && !isTerminated.current) {
         isTerminated.current = true
-        showToast('Multiple malpractice attempts detected. Your exam will be terminated.')
-        router.push('/dashboard')
+        showToast('Multiple violations detected. Your exam will be terminated.')
+        
+        // Give the user a moment to see the message before terminating
+        setTimeout(() => {
+          onTerminate();
+          router.push('/dashboard')
+        }, 3000)
       }
 
       return newCounts
