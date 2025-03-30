@@ -2,74 +2,13 @@
 
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Search, Filter, BookOpen, Clock, Award, ArrowRight, Users } from "lucide-react"
-
-const mockCourses = [
-  {
-    id: 1,
-    title: "NSET Complete Preparation",
-    description: "Comprehensive course covering all NSET topics with practice tests and detailed explanations.",
-    price: 99,
-    duration: "12 weeks",
-    level: "Beginner",
-    students: 1234,
-    image: "/courses/nset-complete.jpg"
-  },
-  {
-    id: 2,
-    title: "NSET Advanced Problem Solving",
-    description: "Master advanced problem-solving techniques for higher scores in NSET examination.",
-    price: 149,
-    duration: "8 weeks",
-    level: "Advanced",
-    students: 856,
-    image: "/courses/problem-solving.jpg"
-  },
-  {
-    id: 3,
-    title: "NSET Mock Test Series",
-    description: "Practice with real NSET-style questions and get detailed performance analytics.",
-    price: 79,
-    duration: "6 weeks",
-    level: "Intermediate",
-    students: 2156,
-    image: "/courses/mock-tests.jpg"
-  },
-  {
-    id: 4,
-    title: "NSET Crash Course",
-    description: "Quick revision of all important topics with focus on most frequently asked questions.",
-    price: 59,
-    duration: "4 weeks",
-    level: "Intermediate",
-    students: 1589,
-    image: "/courses/crash-course.jpg"
-  },
-  {
-    id: 5,
-    title: "NSET Interview Preparation",
-    description: "Comprehensive guide to ace the NSET interview round with mock interviews.",
-    price: 129,
-    duration: "6 weeks",
-    level: "Advanced",
-    students: 745,
-    image: "/courses/interview-prep.jpg"
-  },
-  {
-    id: 6,
-    title: "NSET Fundamentals",
-    description: "Build strong foundations with this beginner-friendly course covering basic concepts.",
-    price: 89,
-    duration: "10 weeks",
-    level: "Beginner",
-    students: 3267,
-    image: "/courses/fundamentals.jpg"
-  }
-]
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { toast } from "sonner"
 
 type Course = {
-  id: number
+  id: string
   title: string
   description: string
   price: number
@@ -82,8 +21,45 @@ type Course = {
 export default function CoursesPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedLevel, setSelectedLevel] = useState<string>("all")
+  const [courses, setCourses] = useState<Course[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const supabase = createClientComponentClient()
 
-  const filteredCourses = mockCourses.filter((course) => {
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('courses')
+          .select('*')
+          .order('created_at', { ascending: false })
+
+        if (error) throw error
+
+        // Transform the data to match our Course type
+        const transformedCourses = data.map(course => ({
+          id: course.id,
+          title: course.title,
+          description: course.description,
+          price: course.price,
+          duration: course.duration,
+          level: course.level,
+          students: course.students || 0, // Default to 0 if not set
+          image: course.image || "/courses/default-course.jpg" // Default image if not set
+        }))
+
+        setCourses(transformedCourses)
+      } catch (error) {
+        console.error('Error fetching courses:', error)
+        toast.error("Failed to load courses. Please try again later.")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchCourses()
+  }, [supabase])
+
+  const filteredCourses = courses.filter((course) => {
     const matchesSearch = course.title
       .toLowerCase()
       .includes(searchQuery.toLowerCase())
@@ -117,6 +93,18 @@ export default function CoursesPage() {
     return colors[index % colors.length]
   }
 
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-6xl mx-auto">
@@ -147,22 +135,21 @@ export default function CoursesPage() {
             return (
               <div
                 key={course.id}
-                className={`group relative bg-gradient-to-br ${color.bg} border ${color.border} rounded-2xl p-6 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg ${color.shadow} animate-fade-in transform-gpu origin-center`}
+                className={`relative bg-gradient-to-br ${color.bg} border ${color.border} rounded-2xl p-6 ${color.shadow} animate-fade-in transform-gpu origin-center`}
                 style={{ animationDelay: `${index * 150}ms` }}
               >
-                <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 ease-in-out rounded-2xl pointer-events-none" />
                 <div className="relative space-y-4">
                   <div className="flex justify-between items-start">
-                    <h3 className={`text-xl font-bold ${color.text} group-hover:bg-gradient-to-r from-indigo-600 to-violet-600 group-hover:bg-clip-text group-hover:text-transparent transition-all duration-500`}>
+                    <h3 className={`text-xl font-bold ${color.text}`}>
                       {course.title}
                     </h3>
                     <span className={`${getLevelColor(course.level)} text-sm px-3 py-1.5 rounded-full flex items-center gap-1.5 font-medium`}>
-                      <Award className="h-4 w-4 group-hover:scale-110 transition-transform" />
+                      <Award className="h-4 w-4" />
                       {course.level}
                     </span>
                   </div>
 
-                  <p className="text-gray-600 line-clamp-2 group-hover:line-clamp-none transition-all duration-500">
+                  <p className="text-gray-600 line-clamp-2">
                     {course.description}
                   </p>
 
@@ -178,15 +165,18 @@ export default function CoursesPage() {
                   </div>
 
                   <div className="flex items-center justify-between pt-4">
-                    <span className={`text-2xl font-bold ${color.text} group-hover:bg-gradient-to-r from-indigo-600 to-violet-600 group-hover:bg-clip-text group-hover:text-transparent transition-all duration-500`}>
-                      ${course.price}
+                    <span className={`text-2xl font-bold ${color.text}`}>
+                      {new Intl.NumberFormat('en-IN', {
+                        style: 'currency',
+                        currency: 'INR'
+                      }).format(course.price)}
                     </span>
                     <Link href={`/courses/${course.id}`}>
                       <Button 
-                        className={`bg-white border ${color.border} ${color.text} group-hover:bg-gradient-to-r group-hover:from-indigo-600 group-hover:to-violet-600 group-hover:text-white group-hover:border-transparent transition-all duration-500 hover:scale-105`}
+                        className={`bg-white border ${color.border} ${color.text}`}
                       >
                         View Details
-                        <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                        <ArrowRight className="w-4 h-4 ml-2" />
                       </Button>
                     </Link>
                   </div>
