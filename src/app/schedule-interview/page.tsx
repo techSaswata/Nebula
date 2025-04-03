@@ -1,10 +1,14 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { toast } from "sonner"
-import { Calendar as CalendarIcon, Clock, Users, ArrowRight, Video, Target, CheckCircle } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { Calendar as CalendarIcon, Clock, Users, ArrowRight, Video, Target, CheckCircle, Loader2 } from "lucide-react"
+import { useAuth } from "@/contexts/AuthContext"
+import { createInterview } from "@/lib/actions/interview.action"
+import { INTERVIEW_DURATIONS, INTERVIEW_ROLES } from "@/lib/constants"
 
 const timeSlots = [
   "09:00 AM",
@@ -13,30 +17,6 @@ const timeSlots = [
   "02:00 PM",
   "03:00 PM",
   "04:00 PM",
-]
-
-const interviewTypes = [
-  {
-    id: "technical",
-    title: "Technical Interview",
-    description: "Assessment of technical skills and problem-solving abilities",
-    duration: "1 hour",
-    icon: Target,
-  },
-  {
-    id: "system-design",
-    title: "System Design Interview",
-    description: "Discussion of architecture and system design principles",
-    duration: "1 hour",
-    icon: Users,
-  },
-  {
-    id: "behavioral",
-    title: "Behavioral Interview",
-    description: "Evaluation of soft skills and past experiences",
-    duration: "45 minutes",
-    icon: Video,
-  },
 ]
 
 const getSectionStyle = (index: number) => {
@@ -76,24 +56,89 @@ const getSectionStyle = (index: number) => {
 }
 
 export default function ScheduleInterviewPage() {
+  const router = useRouter()
+  const { user } = useAuth()
+  
   const [selectedDate, setSelectedDate] = useState("")
   const [selectedTime, setSelectedTime] = useState("")
-  const [selectedType, setSelectedType] = useState("")
+  const [selectedCompany, setSelectedCompany] = useState("AcademicX")
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    // Redirect to login if not authenticated
+    if (!user) {
+      toast.error("Please login to schedule an interview")
+      router.push("/auth/login")
+    }
+  }, [user, router])
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!selectedDate || !selectedTime || !selectedType) {
+    
+    if (!selectedDate || !selectedTime) {
       toast.error("Please fill in all fields")
       return
     }
+
+    if (!user) {
+      toast.error("Please login to schedule an interview")
+      router.push("/auth/login")
+      return
+    }
     
-    toast.success("Interview scheduled successfully!", {
-      description: `Your ${interviewTypes.find(t => t.id === selectedType)?.title} is scheduled for ${selectedDate} at ${selectedTime}.`
-    })
+    try {
+      setIsSubmitting(true)
+      
+      // Calculate scheduled date and time
+      const scheduledDate = new Date(`${selectedDate}T${convertTo24Hour(selectedTime)}`)
+      
+      // Create interview in Supabase
+      const result = await createInterview({
+        title: "NSET Mock Interview",
+        description: "This NSET interview is a comprehensive evaluation covering mathematical and problem-solving skills, a dreams and aspirations segment, and a technical round.",
+        userId: user.id,
+        scheduledDate: scheduledDate.toISOString(),
+        duration: 60,
+        position: "Student at Scaler",
+        company: selectedCompany
+      })
+      
+      if (result.success) {
+        toast.success("Interview scheduled successfully!", {
+          description: `Your NSET Mock Interview is scheduled for ${selectedDate} at ${selectedTime}.`
+        })
+        
+        // Reset form
+        setSelectedDate("")
+        setSelectedTime("")
+        
+        // Navigate to dashboard instead of the interview page
+        router.push("/dashboard")
+      } else {
+        toast.error(result.error || "Failed to schedule interview")
+      }
+    } catch (error) {
+      console.error("Error scheduling interview:", error)
+      toast.error("Failed to schedule interview")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  // Convert 12-hour time format to 24-hour format for Date constructor
+  const convertTo24Hour = (time12h: string): string => {
+    const [time, modifier] = time12h.split(' ')
+    let [hours, minutes] = time.split(':')
     
-    setSelectedDate("")
-    setSelectedTime("")
-    setSelectedType("")
+    if (hours === '12') {
+      hours = '00'
+    }
+    
+    if (modifier === 'PM') {
+      hours = String(parseInt(hours, 10) + 12)
+    }
+    
+    return `${hours}:${minutes}:00`
   }
 
   return (
@@ -101,50 +146,37 @@ export default function ScheduleInterviewPage() {
       <div className="max-w-4xl mx-auto space-y-8">
         <div className="text-center space-y-2 animate-fade-in">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
-            Schedule Your Interview
+            Schedule Your NSET Mock Interview
           </h1>
           <p className="text-gray-600 max-w-2xl mx-auto">
-            Choose your preferred interview type, date, and time slot for your NSET preparation journey.
+            Choose your preferred date and time slot for your AI-powered NSET mock interview preparation.
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
-          {/* Interview Type Selection */}
+          {/* Interview Info Card */}
           <section className={`rounded-2xl p-6 border animate-slide-up [animation-delay:200ms] ${getSectionStyle(0).bg} ${getSectionStyle(0).border} shadow-lg hover:shadow-xl transition-all duration-300`}>
             <div className="flex items-center gap-2 mb-6">
               <Target className={`h-6 w-6 ${getSectionStyle(0).icon}`} />
-              <h2 className={`text-2xl font-bold ${getSectionStyle(0).text}`}>Select Interview Type</h2>
+              <h2 className={`text-2xl font-bold ${getSectionStyle(0).text}`}>NSET Mock Interview</h2>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {interviewTypes.map((type) => {
-                const Icon = type.icon
-                return (
-                  <Card
-                    key={type.id}
-                    className={`cursor-pointer transition-all duration-300 hover:scale-[1.02] group ${
-                      selectedType === type.id
-                        ? `${getSectionStyle(0).selected} shadow-lg`
-                        : `border-violet-100 ${getSectionStyle(0).hover} hover:shadow-lg hover:shadow-violet-200/50`
-                    }`}
-                    onClick={() => setSelectedType(type.id)}
-                  >
-                    <CardHeader>
-                      <div className="flex items-center gap-2">
-                        <Icon className={`h-5 w-5 ${getSectionStyle(0).icon} group-hover:scale-110 transition-transform`} />
-                        <CardTitle className={`text-lg ${getSectionStyle(0).text}`}>{type.title}</CardTitle>
-                      </div>
-                      <CardDescription className={getSectionStyle(0).muted}>{type.description}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center gap-1.5 text-sm text-violet-600">
-                        <Clock className="h-4 w-4" />
-                        <span>Duration: {type.duration}</span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )
-              })}
-            </div>
+            <Card className="border-violet-100">
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Video className={`h-5 w-5 ${getSectionStyle(0).icon}`} />
+                  <CardTitle className={`text-lg ${getSectionStyle(0).text}`}>NSET Mock Interview</CardTitle>
+                </div>
+                <CardDescription className={getSectionStyle(0).muted}>
+                  This NSET interview is a comprehensive evaluation covering mathematical and problem-solving skills, a dreams and aspirations segment, and a technical round.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-1.5 text-sm text-violet-600">
+                  <Clock className="h-4 w-4" />
+                  <span>Duration: 60 minutes</span>
+                </div>
+              </CardContent>
+            </Card>
           </section>
 
           {/* Date Selection */}
@@ -197,9 +229,19 @@ export default function ScheduleInterviewPage() {
             type="submit" 
             className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white shadow-lg transform transition-all duration-300 hover:scale-[1.01] hover:shadow-indigo-300/50 animate-slide-up [animation-delay:800ms]" 
             size="lg"
+            disabled={isSubmitting}
           >
-            Schedule Interview
-            <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+            {isSubmitting ? (
+              <div className="flex items-center gap-2">
+                <Loader2 className="h-5 w-5 animate-spin" />
+                <span>Scheduling...</span>
+              </div>
+            ) : (
+              <>
+                Schedule Interview
+                <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+              </>
+            )}
           </Button>
         </form>
       </div>

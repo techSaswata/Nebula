@@ -840,7 +840,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
           </h1>
           <div className="flex items-center gap-4">
             {warningCount > 0 && (
-              <div className={`text-sm font-medium px-3 py-1 rounded-full ${warningCount >= 8 ? 'bg-red-500 animate-pulse' : 'bg-yellow-500'}`}>
+              <div className={`text-sm font-medium px-3 py-1 rounded-full ${warningCount >= 8 ? 'bg-red-500 animate-slow-pulse' : 'bg-yellow-500'}`}>
                 Warnings: {warningCount}/10
               </div>
             )}
@@ -853,7 +853,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
               className="text-white hover:bg-white/20 transition-all duration-300"
               onClick={() => setShowInstructionsDialog(true)}
             >
-              <Info className="w-5 h-5 mr-1 animate-pulse" />
+              <Info className="w-5 h-5 mr-1 animate-slow-pulse" />
               Instructions
             </Button>
           </div>
@@ -980,19 +980,19 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
           <div className="w-72 bg-gradient-to-b from-white to-indigo-50 border-l border-l-indigo-100 p-4 shadow-lg">
             <div className="mb-6 bg-white rounded-lg p-4 shadow-md">
               <div className="flex items-center gap-2 mb-2 hover:bg-gray-50 p-2 rounded transition-colors duration-200">
-                <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse"></div>
+                <div className="w-3 h-3 rounded-full bg-green-500 animate-slow-pulse"></div>
                 <span className="text-sm text-gray-600">Answered</span>
               </div>
               <div className="flex items-center gap-2 mb-2 hover:bg-gray-50 p-2 rounded transition-colors duration-200">
-                <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse"></div>
+                <div className="w-3 h-3 rounded-full bg-red-500 animate-slow-pulse"></div>
                 <span className="text-sm text-gray-600">Not Answered</span>
               </div>
               <div className="flex items-center gap-2 mb-2 hover:bg-gray-50 p-2 rounded transition-colors duration-200">
-                <div className="w-3 h-3 rounded-full bg-purple-500 animate-pulse"></div>
+                <div className="w-3 h-3 rounded-full bg-purple-500 animate-slow-pulse"></div>
                 <span className="text-sm text-gray-600">Marked for Review</span>
               </div>
               <div className="flex items-center gap-2 hover:bg-gray-50 p-2 rounded transition-colors duration-200">
-                <div className="w-3 h-3 rounded-full bg-gray-400 animate-pulse"></div>
+                <div className="w-3 h-3 rounded-full bg-gray-400 animate-slow-pulse"></div>
                 <span className="text-sm text-gray-600">Not Visited</span>
               </div>
             </div>
@@ -1012,7 +1012,7 @@ export default function ExamPage({ params }: { params: Promise<{ id: string }> }
                       ${status === 'not-answered' ? 'bg-gradient-to-br from-red-500 to-red-600 text-white' : ''}
                       ${status === 'marked' ? 'bg-gradient-to-br from-purple-500 to-purple-600 text-white' : ''}
                       ${status === 'not-visited' ? 'bg-gradient-to-br from-gray-400 to-gray-500 text-white' : ''}
-                      ${currentQuestion === index ? 'ring-2 ring-offset-2 ring-indigo-500 animate-pulse' : ''}
+                      ${currentQuestion === index ? 'ring-2 ring-offset-2 ring-indigo-500 animate-slow-pulse' : ''}
                     `}
                   >
                     {displayNumber}
