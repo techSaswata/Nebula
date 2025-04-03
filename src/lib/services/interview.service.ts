@@ -64,3 +64,40 @@ export async function getAllCourses(): Promise<Course[]> {
     throw error;
   }
 }
+
+// Helper functions to get static data based on course ID
+export function getFeaturesForCourse(courseId: number): string[] {
+  const featuresMap: Record<number, string[]> = {
+    1: ["1 Mock Test", "1 AI Mock Interview", "Basic Study Materials", "Community Access"],
+    2: ["4 Mock Tests", "1 Mentorship Session", "Detailed Performance Analysis", "Study Schedule"],
+    3: ["4 AI Mock Interviews", "1 Mentorship Session", "Interview Preparation Guide", "Performance Analytics"],
+    4: ["3 Mentorship Sessions", "Personalized Study Plan", "Progress Tracking", "Dedicated Aspirant & Mentor Groups"],
+    5: ["4 Mock Tests", "4 AI Mock Interviews", "Weekly Mentorship Sessions", "Dedicated Aspirant & Mentor Groups", "Premium Study Materials", "Priority Support"],
+    6: ["10 Mock Tests", "10 AI Mock Interviews", "Weekly Mentorship Sessions", "Dedicated Aspirant & Mentor Groups", "Premium Study Materials", "Priority Support", "Personal Success Coach"]
+  };
+  return featuresMap[courseId] || [];
+}
+
+export function getWhyJoinForCourse(courseId: number): string[] {
+  const whyJoinMap: Record<number, string[]> = {
+    1: ["Zero investment to start your preparation", "Experience our AI-powered interview system", "Join our supportive community", "Get a feel of the actual exam pattern"],
+    2: ["Comprehensive test series", "Personalized mentorship", "Structured study plan", "Affordable pricing"],
+    3: ["First-ever AI interview system in NSET preparation", "Real-time feedback and improvement suggestions", "Personalized interview strategies", "Expert mentorship guidance"],
+    4: ["Regular mentorship support", "Personalized study strategies", "Progress monitoring", "Budget-friendly option"],
+    5: ["Balanced mix of tests and interviews", "Weekly mentorship for continuous guidance", "Access to exclusive study materials", "Dedicated community support", "Best value for money"],
+    6: ["Maximum practice opportunities", "Intensive interview preparation", "Weekly mentorship for consistent growth", "Exclusive study materials", "Personal success coach", "Highest success rate"]
+  };
+  return whyJoinMap[courseId] || [];
+}
+
+export function getHighlightsForCourse(courseId: number): string[] {
+  const highlightsMap: Record<number, string[]> = {
+    1: ["Experience our revolutionary AI interview system", "Get a taste of the actual exam pattern", "Join our supportive community", "No commitment required"],
+    2: ["Regular mock tests for consistent practice", "Expert mentorship guidance", "Detailed performance analysis", "Structured study schedule"],
+    3: ["Revolutionary AI interview system", "Real-time feedback and analysis", "Personalized interview strategies", "Expert mentorship support"],
+    4: ["Regular mentorship sessions", "Personalized study strategies", "Progress tracking", "Dedicated support"],
+    5: ["Comprehensive preparation package", "Weekly mentorship sessions", "Exclusive study materials", "Dedicated community support", "Best value for money"],
+    6: ["Maximum practice opportunities", "Intensive interview preparation", "Weekly mentorship sessions", "Exclusive study materials", "Personal success coach", "Highest success rate"]
+  };
+  return highlightsMap[courseId] || [];
+}
