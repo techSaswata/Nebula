@@ -91,6 +91,8 @@ export function InterviewSetup({ interviewId }: InterviewSetupProps) {
       }
       setStream(newStream);
       setSelectedCamera(deviceId || '');
+      // Store the selected camera ID in localStorage
+      localStorage.setItem('selectedCameraId', deviceId || '');
       setSteps(prevSteps =>
         prevSteps.map(s =>
           s.id === SetupStep.CAMERA ? { ...s, completed: true } : s

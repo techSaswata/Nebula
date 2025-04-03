@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { CallStatus } from "../types";
+import { Mic, MicOff, PhoneOff, Phone } from "lucide-react";
 
 interface InterviewControlsProps {
   callStatus: CallStatus;
@@ -19,13 +20,14 @@ export const InterviewControls = ({
   isSpeaking,
 }: InterviewControlsProps) => {
   return (
-    <div className="flex justify-center gap-4">
+    <div className="flex justify-center items-center gap-6">
       {callStatus === CallStatus.INACTIVE && (
         <Button
           onClick={onStartCall}
-          className="bg-green-600 hover:bg-green-700"
+          className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-6 rounded-2xl font-medium transition-all duration-200 flex items-center gap-2 shadow-lg shadow-emerald-500/20 border border-emerald-500/20"
         >
-          Start Interview
+          <Phone className="w-5 h-5" />
+          <span>Start Interview</span>
         </Button>
       )}
 
@@ -33,18 +35,26 @@ export const InterviewControls = ({
         <>
           <Button
             onClick={onToggleMute}
-            className={`${
-              isMuted ? "bg-red-600 hover:bg-red-700" : "bg-blue-600 hover:bg-blue-700"
-            }`}
+            className={`
+              w-14 h-14 rounded-xl flex items-center justify-center transition-all duration-200 shadow-lg border
+              ${isMuted 
+                ? "bg-red-600 hover:bg-red-700 shadow-red-500/20 border-red-500/20" 
+                : "bg-blue-600 hover:bg-blue-700 shadow-blue-500/20 border-blue-500/20"
+              }
+            `}
           >
-            {isMuted ? "Unmute" : "Mute"}
+            {isMuted ? (
+              <MicOff className="w-6 h-6 text-white" />
+            ) : (
+              <Mic className="w-6 h-6 text-white" />
+            )}
           </Button>
 
           <Button
             onClick={onEndCall}
-            className="bg-red-600 hover:bg-red-700"
+            className="w-14 h-14 rounded-xl bg-red-600 hover:bg-red-700 flex items-center justify-center transition-all duration-200 shadow-lg shadow-red-500/20 border border-red-500/20"
           >
-            End Interview
+            <PhoneOff className="w-6 h-6 text-white" />
           </Button>
         </>
       )}

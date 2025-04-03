@@ -58,6 +58,47 @@ export const InterviewPage = ({
   const [interviewQuestions, setInterviewQuestions] = useState<CodingQuestion[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
+  const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
+
+  // Initialize video stream
+  useEffect(() => {
+    const initializeVideo = async () => {
+      try {
+        // Get the stored camera ID
+        const cameraId = localStorage.getItem('selectedCameraId');
+        
+        // If there's an existing stream, stop it
+        if (videoStream) {
+          videoStream.getTracks().forEach(track => track.stop());
+        }
+
+        // Get new video stream
+        const newStream = await navigator.mediaDevices.getUserMedia({
+          video: cameraId ? { deviceId: { exact: cameraId } } : true
+        });
+
+        // Set the stream to the video element
+        const videoElement = document.getElementById('localVideo') as HTMLVideoElement;
+        if (videoElement) {
+          videoElement.srcObject = newStream;
+        }
+
+        setVideoStream(newStream);
+      } catch (error) {
+        console.error('Error initializing video:', error);
+        toast.error('Failed to initialize video. Please refresh the page.');
+      }
+    };
+
+    initializeVideo();
+
+    // Cleanup function
+    return () => {
+      if (videoStream) {
+        videoStream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []); // Empty dependency array means this runs once on mount
 
   // Initialize questions only once when component mounts
   useEffect(() => {
@@ -1257,80 +1298,211 @@ Wrong Answers: ${wrongQuestionIds.length}
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gray-950 text-white p-6">
-      <div className="flex-1 flex gap-6">
+    <div className="flex flex-col h-screen bg-black text-white">
+      <div className="flex-1 flex gap-6 p-6">
         {/* Left side - Question and Answer Area */}
         <div className="flex-1 flex flex-col gap-4">
           {/* Question Display */}
-          <div className="flex-1">
-            {getCurrentContent()}
+          <div className="flex-1 bg-[#111114] rounded-xl p-6 shadow-xl border border-gray-800/30 backdrop-blur-sm">
+            <div className="space-y-6">
+              {currentQuestionIndex >= 0 && currentQuestionIndex < interviewQuestions.length && (
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-sm font-medium">
+                      {currentQuestionIndex + 1}
+                    </div>
+                    <h2 className="text-xl font-medium text-gray-200">
+                      Question {currentQuestionIndex + 1} of {interviewQuestions.length}
+                    </h2>
+                  </div>
+                  {isTimerActive && (
+                    <div className="flex items-center gap-2 bg-black/40 px-4 py-2 rounded-full border border-gray-800/30">
+                      <div className={`w-2 h-2 rounded-full ${timeRemaining < 60 ? 'bg-red-500 animate-pulse' : 'bg-yellow-500'}`} />
+                      <span className={`font-mono text-lg ${timeRemaining < 60 ? 'text-red-400' : 'text-yellow-400'}`}>
+                        {formatTime(timeRemaining)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="prose prose-invert max-w-none">
+                {currentQuestionIndex === -1 ? (
+                  <div className="text-center py-12">
+                    <h2 className="text-2xl font-semibold text-gray-200 mb-4">Welcome to Your Interview</h2>
+                    <p className="text-gray-400">
+                      The AI interviewer will guide you through the questions. Click "Start Interview" when you're ready.
+                    </p>
+                  </div>
+                ) : currentQuestionIndex < interviewQuestions.length && showCurrentQuestion ? (
+                  <div className="space-y-6">
+                    <div className="bg-black/40 rounded-lg p-6 border border-gray-800/30">
+                      <p className="text-lg text-gray-300 leading-relaxed">
+                        {interviewQuestions[currentQuestionIndex].question}
+                      </p>
+                    </div>
+                    
+                    <div className="mt-6">
+                      <textarea
+                        value={solution}
+                        onChange={(e) => setSolution(e.target.value)}
+                        placeholder="Type your solution here..."
+                        className="w-full h-48 bg-black/40 text-gray-200 p-4 rounded-xl border border-gray-800/30 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 transition-all duration-200 placeholder:text-gray-600"
+                        disabled={isSubmitting}
+                      />
+                      
+                      {!isSubmitting && (
+                        <div className="mt-4">
+                          <Button
+                            onClick={handleSubmitSolution}
+                            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 py-2.5 rounded-lg font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/20"
+                            disabled={!solution.trim()}
+                          >
+                            Submit Solution
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <p className="text-gray-400">
+                      {currentQuestionIndex >= interviewQuestions.length ? 
+                        "Great job! You've completed all questions." :
+                        "Listen to the interviewer's instructions..."}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Latest Transcript (Subtitle Style) */}
-          <div className="bg-black/50 p-4 rounded-lg text-center min-h-[60px]">
-            {transcript.length > 0 ? (
-              <p className="text-lg text-white">
-                {transcript[transcript.length - 1].content}
-              </p>
-            ) : (
-              <p className="text-lg text-gray-400">
-                Waiting for interview to start...
-              </p>
-            )}
-            
-            {/* Status prompts */}
-            {callStatus === CallStatus.ACTIVE && (
-              <div className="mt-2">
-                {isSpeaking ? (
-                  <p className="text-sm text-indigo-400">AI is speaking...</p>
-                ) : showCurrentQuestion ? (
-                  <p className="text-sm text-green-400">Click submit button to answer the question</p>
-                ) : (
-                  <p className="text-sm text-yellow-400">Speak now...</p>
-                )}
-              </div>
-            )}
+          <div className="bg-[#111114] rounded-xl p-4 shadow-xl border border-gray-800/30 backdrop-blur-sm">
+            <div className="text-center">
+              {transcript.length > 0 ? (
+                <p className="text-lg text-gray-200">
+                  {transcript[transcript.length - 1].content}
+                </p>
+              ) : (
+                <p className="text-lg text-gray-500">
+                  Waiting for interview to start...
+                </p>
+              )}
+              
+              {/* Status prompts */}
+              {callStatus === CallStatus.ACTIVE && (
+                <div className="mt-3">
+                  {isSpeaking ? (
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-500/10 rounded-full border border-indigo-500/20">
+                      <div className="flex gap-1">
+                        <div className="w-1 h-1 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                        <div className="w-1 h-1 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                        <div className="w-1 h-1 bg-indigo-500 rounded-full animate-bounce" />
+                      </div>
+                      <p className="text-sm text-indigo-400">AI is speaking...</p>
+                    </div>
+                  ) : showCurrentQuestion ? (
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-500/10 rounded-full border border-green-500/20">
+                      <div className="w-1.5 h-1.5 bg-green-500 rounded-full" />
+                      <p className="text-sm text-green-400">Click submit when ready</p>
+                    </div>
+                  ) : (
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-yellow-500/10 rounded-full border border-yellow-500/20">
+                      <div className="w-1.5 h-1.5 bg-yellow-500 rounded-full" />
+                      <p className="text-sm text-yellow-400">Your turn to speak</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Right side - Profiles */}
-        <div className="w-80 space-y-6">
-          <div className="bg-indigo-950 rounded-lg p-4 border border-indigo-800/30">
-            <ParticipantProfile
-              role="interviewer"
-              name="AI Interviewer"
-              type={interviewType}
-              isSpeaking={isSpeaking}
-              transcript={transcript}
-              avatarLetter="AI"
-              bgColorClass="bg-indigo-600"
-              status="active"
-            />
-          </div>
+        <div className="w-[400px]">
+          <div className="space-y-4 sticky top-8">
+            {/* AI Interviewer */}
+            <div className="bg-[#111114] rounded-xl shadow-xl border border-gray-800/30 overflow-hidden">
+              <div className="p-6 border-b border-gray-800/50 bg-gradient-to-r from-indigo-600/10 to-violet-600/10">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center shadow-lg">
+                    <span className="text-xl font-semibold text-white">AI</span>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-200">AI Interviewer</h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                      <p className="text-sm text-gray-400">Online</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-          <div className="bg-purple-950 rounded-lg p-4 border border-purple-800/30">
-            <ParticipantProfile
-              role="candidate"
-              name={userName}
-              transcript={transcript}
-              avatarLetter={userName[0]?.toUpperCase() || "U"}
-              bgColorClass="bg-purple-600"
-              status="active"
-            />
+            {/* Candidate Video */}
+            <div className="bg-[#111114] rounded-xl overflow-hidden shadow-xl border border-gray-800/30">
+              <div className="p-6 border-b border-gray-800/50 bg-gradient-to-r from-purple-600/10 to-pink-600/10">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center shadow-lg">
+                    <span className="text-xl font-semibold text-white">{userName[0]}</span>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-200">{userName}</h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                      <p className="text-sm text-gray-400">Candidate</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="aspect-[4/3] bg-black/80 relative">
+                <video
+                  id="localVideo"
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute bottom-4 left-4 right-4">
+                  <div className="flex items-center justify-between px-3 py-2 bg-black/60 backdrop-blur-sm rounded-lg border border-white/10">
+                    <div className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                      <span className="text-sm text-gray-300">Camera On</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {isMuted ? (
+                        <div className="flex items-center gap-1.5 text-red-400">
+                          <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                          <span className="text-sm">Muted</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5 text-emerald-400">
+                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                          <span className="text-sm">Unmuted</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Bottom controls */}
-      <div className="mt-6">
-        <InterviewControls
-          callStatus={callStatus}
-          isMuted={isMuted}
-          onStartCall={handleStartCall}
-          onEndCall={handleEndCall}
-          onToggleMute={toggleMute}
-          isSpeaking={isSpeaking}
-        />
+      <div className="p-4 border-t border-gray-800/30 bg-[#111114]/80 backdrop-blur-sm">
+        <div className="max-w-7xl mx-auto">
+          <InterviewControls
+            callStatus={callStatus}
+            isMuted={isMuted}
+            onStartCall={handleStartCall}
+            onEndCall={handleEndCall}
+            onToggleMute={toggleMute}
+            isSpeaking={isSpeaking}
+          />
+        </div>
       </div>
     </div>
   );
