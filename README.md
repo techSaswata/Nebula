@@ -1,4 +1,4 @@
-# Nebula - NSET Preparation Platform
+# Nebula - Exam Preparation Platform with AI Interviewer
 
 Nebula is a comprehensive platform designed to help students prepare for the Scaler School of Technology entrance exam (NSET). It offers a range of tools including mock tests, interview preparation, scheduling, and performance tracking.
 
